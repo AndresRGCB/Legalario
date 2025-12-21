@@ -6,15 +6,7 @@ Sistema de transacciones con procesamiento sincrono y asincrono usando FastAPI, 
 
 - Docker y Docker Compose
 
-## Ejecucion con Docker (Recomendado)
-
-### 1. Construir el frontend primero
-
-```bash
-docker-compose --profile build up frontend
-```
-
-### 2. Levantar todos los servicios
+## Ejecucion con Docker (UN SOLO COMANDO)
 
 ```bash
 docker-compose up --build
@@ -26,7 +18,9 @@ Esto levanta automaticamente:
 - **FastAPI** (puerto 8000) - API + Frontend
 - **Celery Worker** - Procesamiento asincrono
 
-### 3. Acceder a la aplicacion
+El frontend se construye automaticamente dentro del Dockerfile (multi-stage build).
+
+### Acceder a la aplicacion
 
 - **Frontend:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
