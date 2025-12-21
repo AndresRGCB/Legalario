@@ -19,12 +19,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Crear enum types
-    transaction_status = postgresql.ENUM('pendiente', 'procesado', 'fallido', name='transactionstatus')
-    transaction_type = postgresql.ENUM('deposito', 'retiro', 'transferencia', name='transactiontype')
+    # Crear enum types con checkfirst=True para evitar error si ya existen
+    transaction_status = postgresql.ENUM('pendiente', 'procesado', 'fallido', name='transactionstatus', create_type=False)
+    transaction_type = postgresql.ENUM('deposito', 'retiro', 'transferencia', name='transactiontype', create_type=False)
 
-    transaction_status.create(op.get_bind())
-    transaction_type.create(op.get_bind())
+    # Crear tipos solo si no existen
+    transaction_status.create(op.get_bind(), checkfirst=True)
+    transaction_type.create(op.get_bind(), checkfirst=True)
 
     # Crear tabla transactions
     op.create_table(
@@ -33,8 +34,8 @@ def upgrade() -> None:
         sa.Column('idempotency_key', sa.String(255), nullable=False, unique=True, index=True),
         sa.Column('user_id', sa.String(255), nullable=False, index=True),
         sa.Column('monto', sa.Float(), nullable=False),
-        sa.Column('tipo', sa.Enum('deposito', 'retiro', 'transferencia', name='transactiontype'), nullable=False),
-        sa.Column('status', sa.Enum('pendiente', 'procesado', 'fallido', name='transactionstatus'), nullable=False, server_default='pendiente'),
+        sa.Column('tipo', sa.Enum('deposito', 'retiro', 'transferencia', name='transactiontype', create_constraint=False), nullable=False),
+        sa.Column('status', sa.Enum('pendiente', 'procesado', 'fallido', name='transactionstatus', create_constraint=False), nullable=False, server_default='pendiente'),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('processed_at', sa.DateTime(), nullable=True),
