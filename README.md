@@ -4,12 +4,45 @@ Sistema de transacciones con procesamiento sincrono y asincrono usando FastAPI, 
 
 ## Requisitos
 
+- Docker y Docker Compose
+
+## Ejecucion con Docker (Recomendado)
+
+### 1. Construir el frontend primero
+
+```bash
+docker-compose --profile build up frontend
+```
+
+### 2. Levantar todos los servicios
+
+```bash
+docker-compose up --build
+```
+
+Esto levanta automaticamente:
+- **PostgreSQL** (puerto 5432) - Base de datos
+- **Redis** (puerto 6379) - Cola de mensajes
+- **FastAPI** (puerto 8000) - API + Frontend
+- **Celery Worker** - Procesamiento asincrono
+
+### 3. Acceder a la aplicacion
+
+- **Frontend:** http://localhost:8000
+- **API Docs:** http://localhost:8000/docs
+- **API Redoc:** http://localhost:8000/redoc
+
+---
+
+## Ejecucion Manual (Alternativa)
+
+Si prefieres ejecutar sin Docker:
+
+### Requisitos
 - Python 3.10+
 - Node.js 18+
 - PostgreSQL
-- Docker (para Redis)
-
-## Setup
+- Redis
 
 ### 1. Crear la base de datos
 
@@ -20,7 +53,6 @@ CREATE DATABASE legalario_transactions;
 ### 2. Iniciar Redis con Docker
 
 ```bash
-cd legalario-transactions
 docker-compose up -d redis
 ```
 
@@ -57,34 +89,28 @@ npm install
 npm run build
 ```
 
-## Ejecutar
+### 5. Ejecutar (3 terminales)
 
-Necesitas 3 terminales:
-
-### Terminal 1: Redis (si no esta corriendo)
+**Terminal 1: Redis**
 ```bash
 docker-compose up redis
 ```
 
-### Terminal 2: FastAPI
+**Terminal 2: FastAPI**
 ```bash
 cd backend
-venv\Scripts\activate  # o source venv/bin/activate
+venv\Scripts\activate
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Terminal 3: Celery Worker
+**Terminal 3: Celery Worker**
 ```bash
 cd backend
-venv\Scripts\activate  # o source venv/bin/activate
+venv\Scripts\activate
 celery -A app.celery_app.celery_config worker --loglevel=info --pool=solo
 ```
 
-### Acceder a la aplicacion
-
-- **Frontend:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs
-- **API Redoc:** http://localhost:8000/redoc
+---
 
 ## Endpoints
 
@@ -98,6 +124,8 @@ Crear transaccion sincrona (se procesa inmediatamente).
   "tipo": "deposito"
 }
 ```
+
+Tipos disponibles: `deposito`, `retiro`, `transferencia`
 
 ### POST /api/transactions/async-process
 Crear transaccion asincrona (se encola en Celery).
@@ -122,6 +150,8 @@ Query params:
 ### WebSocket /api/transactions/stream
 Recibir actualizaciones en tiempo real cuando cambia el estado de una transaccion.
 
+---
+
 ## Arquitectura
 
 ```
@@ -137,24 +167,58 @@ legalario-transactions/
 │   │   │   ├── routes/       # Endpoints
 │   │   │   └── websocket.py  # WebSocket
 │   │   └── celery_app/       # Celery
-│   └── alembic/              # Migraciones
+│   ├── alembic/              # Migraciones
+│   └── Dockerfile
 ├── frontend/
 │   └── src/                  # React app
-└── docker-compose.yml        # Redis
+├── docker-compose.yml
+└── init-db.sql
 ```
+
+---
 
 ## Flujo de Procesamiento
 
 ### Sincrono (/create)
-1. Recibe peticion
-2. Verifica idempotencia
-3. Guarda en BD con status "procesado"
-4. Retorna transaccion
+```
+Cliente -> POST /create -> Verificar idempotencia -> Guardar (procesado) -> Respuesta
+```
 
 ### Asincrono (/async-process)
-1. Recibe peticion
-2. Guarda en BD con status "pendiente"
-3. Encola tarea en Celery
-4. Worker procesa (simula banco con sleep 2-5s)
-5. Actualiza status a "procesado" o "fallido"
-6. Notifica via WebSocket
+```
+Cliente -> POST /async-process -> Guardar (pendiente) -> Encolar Celery -> Respuesta
+                                                              |
+                                                              v
+                                                      [Celery Worker]
+                                                              |
+                                                         Sleep 2-5s
+                                                              |
+                                                    Actualizar status
+                                                              |
+                                                     WebSocket broadcast
+                                                              |
+                                                              v
+                                                   Frontend actualiza UI
+```
+
+---
+
+## Comandos Docker utiles
+
+```bash
+# Ver logs de todos los servicios
+docker-compose logs -f
+
+# Ver logs de un servicio especifico
+docker-compose logs -f backend
+docker-compose logs -f celery
+
+# Reiniciar un servicio
+docker-compose restart backend
+
+# Parar todo
+docker-compose down
+
+# Parar y eliminar volumenes (reset de BD)
+docker-compose down -v
+```
