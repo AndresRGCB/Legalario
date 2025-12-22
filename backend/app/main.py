@@ -1,17 +1,42 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
+import asyncio
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import transactions_router
-from app.api.websocket import manager
+from app.api.routes import transactions_router, auth_router
+from app.api.websocket import manager, redis_subscriber
+from app.seed import create_default_user
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle manager - ejecuta seed y suscriptor Redis al iniciar."""
+    # Startup: crear usuario por defecto
+    create_default_user()
+
+    # Iniciar suscriptor de Redis en background
+    subscriber_task = asyncio.create_task(redis_subscriber())
+    print("Suscriptor Redis iniciado como background task")
+
+    yield
+
+    # Shutdown: cancelar el suscriptor
+    subscriber_task.cancel()
+    try:
+        await subscriber_task
+    except asyncio.CancelledError:
+        print("Suscriptor Redis detenido")
+
 
 app = FastAPI(
     title="Legalario Transactions API",
     description="API para gestión de transacciones con procesamiento síncrono y asíncrono",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS para desarrollo
@@ -23,7 +48,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir router de transacciones
+# Incluir routers
+app.include_router(auth_router, prefix="/api")
 app.include_router(transactions_router, prefix="/api")
 
 
@@ -36,13 +62,11 @@ def health_check():
 
 # WebSocket endpoint para streaming de transacciones
 @app.websocket("/api/transactions/stream")
-async def websocket_endpoint(websocket: WebSocket, user_id: str = None):
+async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket para recibir actualizaciones de transacciones en tiempo real.
-
-    Query param opcional: user_id - para filtrar solo transacciones del usuario.
     """
-    await manager.connect(websocket, user_id)
+    await manager.connect(websocket)
     try:
         while True:
             # Mantener conexión viva, esperar mensajes del cliente
@@ -51,7 +75,10 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str = None):
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
-        manager.disconnect(websocket, user_id)
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"Error en WebSocket: {e}")
+        manager.disconnect(websocket)
 
 
 # Servir frontend React (archivos estáticos)

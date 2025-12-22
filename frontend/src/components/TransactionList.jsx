@@ -49,30 +49,30 @@ export default function TransactionList({ transactions, loading, error }) {
         {transactions.map(transaction => (
           <div key={transaction.id} style={styles.item}>
             <div style={styles.itemHeader}>
-              <span style={styles.userId}>{transaction.user_id}</span>
+              <span style={styles.userId}>{transaction.user_id || 'Cargando...'}</span>
               <span
                 style={{
                   ...styles.status,
-                  backgroundColor: STATUS_COLORS[transaction.status]
+                  backgroundColor: STATUS_COLORS[transaction.status] || '#6c757d'
                 }}
               >
-                {STATUS_LABELS[transaction.status]}
+                {STATUS_LABELS[transaction.status] || transaction.status || 'Procesando'}
               </span>
             </div>
             <div style={styles.itemBody}>
               <div style={styles.amount}>
-                ${transaction.monto.toFixed(2)}
+                ${transaction.monto != null ? transaction.monto.toFixed(2) : '...'}
               </div>
               <div style={styles.type}>
-                {TYPE_LABELS[transaction.tipo]}
+                {TYPE_LABELS[transaction.tipo] || transaction.tipo || 'Cargando...'}
               </div>
             </div>
             <div style={styles.itemFooter}>
               <span style={styles.date}>
-                {new Date(transaction.created_at).toLocaleString()}
+                {transaction.created_at ? new Date(transaction.created_at).toLocaleString() : 'Procesando...'}
               </span>
               <span style={styles.id}>
-                ID: {transaction.id.slice(0, 8)}...
+                ID: {transaction.id ? String(transaction.id).slice(0, 8) : '...'}...
               </span>
             </div>
             {transaction.error_message && (

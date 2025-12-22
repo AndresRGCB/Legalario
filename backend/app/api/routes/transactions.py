@@ -7,14 +7,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
-from app.models.transaction import Transaction, TransactionStatus, TransactionType
-from app.schemas.transaction import TransactionCreate, TransactionResponse, AsyncProcessResponse
+from app.models.transaction import Transaction
+from app.models.user import User
+from app.schemas.transaction import TransactionCreate, TransactionResponse, AsyncProcessResponse, TransactionStatus
+from app.api.dependencies import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
 
 def generate_idempotency_key(user_id: str, monto: float, tipo: str) -> str:
-    """Genera una clave de idempotencia basada en los datos de la transacción."""
+    """Genera una clave de idempotencia basada en los datos de la transaccion."""
     data = f"{user_id}:{monto}:{tipo}"
     return hashlib.sha256(data.encode()).hexdigest()[:32]
 
@@ -22,13 +24,15 @@ def generate_idempotency_key(user_id: str, monto: float, tipo: str) -> str:
 @router.post("/create", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
 def create_transaction(
     transaction_data: TransactionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Crear una nueva transacción de forma SÍNCRONA.
+    Crear una nueva transaccion de forma SINCRONA.
 
-    - Idempotente: si ya existe una transacción con los mismos datos, retorna 409 Conflict.
-    - La transacción se procesa inmediatamente (status: procesado).
+    - Requiere autenticacion JWT
+    - Idempotente: si ya existe una transaccion con los mismos datos, retorna 409 Conflict.
+    - La transaccion se procesa inmediatamente (status: procesado).
     """
     # Generar clave de idempotencia
     idempotency_key = generate_idempotency_key(
@@ -47,18 +51,18 @@ def create_transaction(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "error": "DUPLICATE_TRANSACTION",
-                "message": f"Ya existe una transacción con estos datos",
+                "message": f"Ya existe una transaccion con estos datos",
                 "existing_transaction_id": str(existing.id)
             }
         )
 
-    # Crear nueva transacción (síncrona - se procesa inmediatamente)
+    # Crear nueva transaccion (sincrona - se procesa inmediatamente)
     new_transaction = Transaction(
         idempotency_key=idempotency_key,
         user_id=transaction_data.user_id,
         monto=transaction_data.monto,
-        tipo=transaction_data.tipo,
-        status=TransactionStatus.PROCESADO  # Síncrono = procesado inmediatamente
+        tipo=transaction_data.tipo.value,
+        status="procesado"  # Sincrono = procesado inmediatamente
     )
 
     try:
@@ -69,7 +73,7 @@ def create_transaction(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Transacción duplicada (race condition detectada)"
+            detail="Transaccion duplicada (race condition detectada)"
         )
 
     return new_transaction
@@ -78,17 +82,19 @@ def create_transaction(
 @router.post("/async-process", response_model=AsyncProcessResponse)
 def async_process_transaction(
     transaction_data: TransactionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Crear y procesar una transacción de forma ASÍNCRONA con Celery.
+    Crear y procesar una transaccion de forma ASINCRONA con Celery.
 
-    - Guarda la transacción con status 'pendiente'.
+    - Requiere autenticacion JWT
+    - Guarda la transaccion con status 'pendiente'.
     - Encola una tarea en Celery para procesamiento.
     - El worker simula un banco externo (sleep) y actualiza el status.
     - Notifica cambios via WebSocket.
     """
-    # Importar aquí para evitar imports circulares
+    # Importar aqui para evitar imports circulares
     from app.celery_app.tasks import process_transaction_task
 
     # Generar clave de idempotencia con prefijo 'async' para diferenciar
@@ -108,18 +114,18 @@ def async_process_transaction(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "error": "DUPLICATE_TRANSACTION",
-                "message": f"Ya existe una transacción async con estos datos",
+                "message": f"Ya existe una transaccion async con estos datos",
                 "existing_transaction_id": str(existing.id)
             }
         )
 
-    # Crear nueva transacción con status pendiente
+    # Crear nueva transaccion con status pendiente
     new_transaction = Transaction(
         idempotency_key=idempotency_key,
         user_id=transaction_data.user_id,
         monto=transaction_data.monto,
-        tipo=transaction_data.tipo,
-        status=TransactionStatus.PENDIENTE
+        tipo=transaction_data.tipo.value,
+        status="pendiente"
     )
 
     try:
@@ -130,7 +136,7 @@ def async_process_transaction(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Transacción duplicada (race condition detectada)"
+            detail="Transaccion duplicada (race condition detectada)"
         )
 
     # Encolar tarea en Celery
@@ -144,28 +150,30 @@ def async_process_transaction(
     return AsyncProcessResponse(
         transaction_id=new_transaction.id,
         task_id=task.id,
-        status=TransactionStatus.PENDIENTE,
-        message="Transacción encolada para procesamiento asíncrono"
+        status="pendiente",
+        message="Transaccion encolada para procesamiento asincrono"
     )
 
 
 @router.get("/", response_model=List[TransactionResponse])
 def list_transactions(
     user_id: Optional[str] = None,
-    status: Optional[TransactionStatus] = None,
+    tx_status: Optional[TransactionStatus] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Listar transacciones con filtros opcionales.
+    Requiere autenticacion JWT.
     """
     query = db.query(Transaction)
 
     if user_id:
         query = query.filter(Transaction.user_id == user_id)
-    if status:
-        query = query.filter(Transaction.status == status)
+    if tx_status:
+        query = query.filter(Transaction.status == tx_status.value)
 
     return query.order_by(Transaction.created_at.desc()).offset(skip).limit(limit).all()
 
@@ -173,10 +181,12 @@ def list_transactions(
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 def get_transaction(
     transaction_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
-    Obtener una transacción por ID.
+    Obtener una transaccion por ID.
+    Requiere autenticacion JWT.
     """
     transaction = db.query(Transaction).filter(
         Transaction.id == transaction_id
@@ -185,7 +195,7 @@ def get_transaction(
     if not transaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transacción no encontrada"
+            detail="Transaccion no encontrada"
         )
 
     return transaction

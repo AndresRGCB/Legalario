@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.celery_app.celery_config import celery_app
 from app.database import SessionLocal
-from app.models.transaction import Transaction, TransactionStatus
+from app.models.transaction import Transaction
 
 
 @celery_app.task(bind=True, max_retries=3)
@@ -32,11 +32,11 @@ def process_transaction_task(self, transaction_id: str):
 
         # Verificar idempotencia en el worker
         # Si ya está procesada o fallida, no reprocesar
-        if transaction.status in [TransactionStatus.PROCESADO, TransactionStatus.FALLIDO]:
+        if transaction.status in ["procesado", "fallido"]:
             return {
                 "status": "already_processed",
                 "transaction_id": transaction_id,
-                "current_status": transaction.status.value
+                "current_status": transaction.status
             }
 
         # Simular procesamiento con banco externo (2-5 segundos)
@@ -48,40 +48,40 @@ def process_transaction_task(self, transaction_id: str):
         base_key = transaction.idempotency_key.replace("async_", "")
         duplicate = db.query(Transaction).filter(
             Transaction.id != transaction.id,
-            Transaction.status == TransactionStatus.PROCESADO,
+            Transaction.status == "procesado",
             Transaction.idempotency_key.in_([base_key, f"async_{base_key}"])
         ).first()
 
         if duplicate:
             # Si hay duplicado procesado, marcar como fallido
-            transaction.status = TransactionStatus.FALLIDO
+            transaction.status = "fallido"
             transaction.error_message = f"Transacción duplicada. Original: {duplicate.id}"
         else:
             # Simular éxito/fallo aleatorio (90% éxito, 10% fallo para demo)
             success = random.random() < 0.9
 
             if success:
-                transaction.status = TransactionStatus.PROCESADO
+                transaction.status = "procesado"
                 transaction.processed_at = datetime.utcnow()
             else:
-                transaction.status = TransactionStatus.FALLIDO
+                transaction.status = "fallido"
                 transaction.error_message = "Error simulado en procesamiento del banco"
 
         transaction.updated_at = datetime.utcnow()
         db.commit()
 
-        # Notificar via WebSocket
+        # Notificar via Redis -> WebSocket
         try:
-            from app.api.websocket import broadcast_transaction_update
-            broadcast_transaction_update(transaction)
+            from app.api.websocket import publish_transaction_update
+            publish_transaction_update(transaction)
         except Exception as e:
-            # Si falla el WebSocket, no es crítico
-            print(f"Error broadcasting WebSocket: {e}")
+            # Si falla la publicación, no es crítico
+            print(f"Error publicando actualización: {e}")
 
         return {
             "status": "completed",
             "transaction_id": transaction_id,
-            "final_status": transaction.status.value,
+            "final_status": transaction.status,
             "processing_time": processing_time
         }
 

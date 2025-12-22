@@ -1,8 +1,8 @@
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import Column, String, Float, DateTime, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Float, DateTime
+from sqlalchemy.dialects.postgresql import UUID, ENUM as PG_ENUM
 
 from app.database import Base
 
@@ -19,6 +19,20 @@ class TransactionType(str, enum.Enum):
     TRANSFERENCIA = "transferencia"
 
 
+# Definir los tipos ENUM de PostgreSQL que se usan (sin crearlos automáticamente)
+transaction_type_enum = PG_ENUM(
+    'deposito', 'retiro', 'transferencia',
+    name='transactiontype',
+    create_type=False
+)
+
+transaction_status_enum = PG_ENUM(
+    'pendiente', 'procesado', 'fallido',
+    name='transactionstatus',
+    create_type=False
+)
+
+
 class Transaction(Base):
     __tablename__ = "transactions"
 
@@ -30,8 +44,8 @@ class Transaction(Base):
     # Datos de la transacción
     user_id = Column(String(255), nullable=False, index=True)
     monto = Column(Float, nullable=False)
-    tipo = Column(SQLEnum(TransactionType), nullable=False)
-    status = Column(SQLEnum(TransactionStatus), default=TransactionStatus.PENDIENTE, nullable=False)
+    tipo = Column(transaction_type_enum, nullable=False)
+    status = Column(transaction_status_enum, nullable=False, server_default='pendiente')
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

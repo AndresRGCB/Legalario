@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '001'
@@ -19,34 +18,33 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Crear enum types con checkfirst=True para evitar error si ya existen
-    transaction_status = postgresql.ENUM('pendiente', 'procesado', 'fallido', name='transactionstatus', create_type=False)
-    transaction_type = postgresql.ENUM('deposito', 'retiro', 'transferencia', name='transactiontype', create_type=False)
+    # Crear enum types con SQL directo para evitar problemas
+    op.execute("DO $$ BEGIN CREATE TYPE transactionstatus AS ENUM ('pendiente', 'procesado', 'fallido'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
+    op.execute("DO $$ BEGIN CREATE TYPE transactiontype AS ENUM ('deposito', 'retiro', 'transferencia'); EXCEPTION WHEN duplicate_object THEN null; END $$;")
 
-    # Crear tipos solo si no existen
-    transaction_status.create(op.get_bind(), checkfirst=True)
-    transaction_type.create(op.get_bind(), checkfirst=True)
+    # Crear tabla transactions con SQL directo
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS transactions (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            idempotency_key VARCHAR(255) NOT NULL UNIQUE,
+            user_id VARCHAR(255) NOT NULL,
+            monto FLOAT NOT NULL,
+            tipo transactiontype NOT NULL,
+            status transactionstatus NOT NULL DEFAULT 'pendiente',
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            processed_at TIMESTAMP,
+            celery_task_id VARCHAR(255),
+            error_message VARCHAR(500)
+        )
+    """)
 
-    # Crear tabla transactions
-    op.create_table(
-        'transactions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column('idempotency_key', sa.String(255), nullable=False, unique=True, index=True),
-        sa.Column('user_id', sa.String(255), nullable=False, index=True),
-        sa.Column('monto', sa.Float(), nullable=False),
-        sa.Column('tipo', sa.Enum('deposito', 'retiro', 'transferencia', name='transactiontype', create_constraint=False), nullable=False),
-        sa.Column('status', sa.Enum('pendiente', 'procesado', 'fallido', name='transactionstatus', create_constraint=False), nullable=False, server_default='pendiente'),
-        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column('processed_at', sa.DateTime(), nullable=True),
-        sa.Column('celery_task_id', sa.String(255), nullable=True),
-        sa.Column('error_message', sa.String(500), nullable=True),
-    )
+    # Crear indices
+    op.execute("CREATE INDEX IF NOT EXISTS ix_transactions_idempotency_key ON transactions (idempotency_key)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_transactions_user_id ON transactions (user_id)")
 
 
 def downgrade() -> None:
-    op.drop_table('transactions')
-
-    # Eliminar enum types
+    op.execute('DROP TABLE IF EXISTS transactions')
     op.execute('DROP TYPE IF EXISTS transactionstatus')
     op.execute('DROP TYPE IF EXISTS transactiontype')
