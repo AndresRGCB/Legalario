@@ -46,55 +46,15 @@ docker-compose up --build
 Esto levanta automaticamente:
 - **PostgreSQL** (puerto 5432) - Base de datos
 - **Redis** (puerto 6379) - Cola de mensajes y Pub/Sub
-- **FastAPI** (puerto 8000) - API + Frontend
+- **FastAPI + React Frontend** (puerto 8000) - API y Frontend integrados
 - **Celery Worker** - Procesamiento asincrono
+
+El frontend de React se construye automaticamente dentro del Dockerfile (multi-stage build) y se sirve desde FastAPI.
 
 ### 4. Acceder a la aplicacion
 
 - **Aplicacion:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
-
-### Credenciales de prueba
-
-```
-Email: test@example.com
-Password: password123
-```
-
----
-
-## Stack Tecnologico
-
-| Capa | Tecnologia |
-|------|------------|
-| Frontend | React 18 + Vite |
-| Backend | FastAPI (Python 3.11) |
-| Base de Datos | PostgreSQL 15 |
-| Cache/Queue | Redis 7 |
-| Worker | Celery |
-| RPA | Selenium + Chromium |
-| IA | Claude API (Anthropic) |
-| Contenedores | Docker + Docker Compose |
-| Migraciones | Alembic |
-| Auth | JWT + bcrypt |
-
----
-
-## Arquitectura
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   React     │────▶│   FastAPI   │────▶│  PostgreSQL │
-│  Frontend   │◀────│   Backend   │     │     BD      │
-└─────────────┘     └──────┬──────┘     └─────────────┘
-       │                   │
-       │ WebSocket         │ Celery Tasks
-       ▼                   ▼
-┌─────────────┐     ┌─────────────┐
-│   Browser   │     │    Redis    │
-│  Real-time  │     │ Queue/PubSub│
-└─────────────┘     └─────────────┘
-```
 
 ---
 
@@ -130,94 +90,6 @@ Password: password123
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-
----
-
-## Estructura del Proyecto
-
-```
-legalario-transactions/
-├── backend/
-│   ├── app/
-│   │   ├── api/routes/          # Endpoints
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── schemas/             # Pydantic schemas
-│   │   ├── services/            # Claude client, Wikipedia scraper
-│   │   ├── celery_app/          # Celery config y tasks
-│   │   └── main.py              # FastAPI app
-│   ├── alembic/versions/        # Migraciones de BD
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/          # React components
-│   │   ├── hooks/               # Custom hooks (useWebSocket, useTransactions)
-│   │   └── services/api.js      # API client
-│   └── package.json
-├── postman/                     # Coleccion Postman
-├── docker-compose.yml
-├── Dockerfile
-├── .env.example                 # Variables de entorno (ejemplo)
-└── README.md
-```
-
----
-
-## Comandos Docker Utiles
-
-```bash
-# Ver logs de todos los servicios
-docker-compose logs -f
-
-# Ver logs de un servicio especifico
-docker-compose logs -f backend
-docker-compose logs -f celery
-
-# Reiniciar un servicio
-docker-compose restart backend
-
-# Parar todo
-docker-compose down
-
-# Parar y eliminar volumenes (reset de BD)
-docker-compose down -v
-```
-
----
-
-## Desarrollo Local (sin Docker)
-
-### Requisitos
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL
-- Redis
-
-### Backend
-
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate  # Windows
-source venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
-```
-
-### Celery Worker
-
-```bash
-cd backend
-celery -A app.celery_app.celery_config worker --loglevel=info --pool=solo
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
 
 ---
 
