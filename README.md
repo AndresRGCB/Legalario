@@ -91,8 +91,3 @@ El frontend de React se construye automaticamente dentro del Dockerfile (multi-s
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
 
----
-
-## Autor
-
-Andres Garcia - Prueba Tecnica Fullstack para Legalario
