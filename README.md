@@ -56,7 +56,7 @@ El frontend de React se construye automaticamente dentro del Dockerfile (multi-s
 - **Aplicacion:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
 
-**Usuario de prueba:** `test@example.com` / `password123`
+**Usuario de prueba:** `user` / `password`
 
 ---
 
