@@ -1,0 +1,408 @@
+{
+  "info": {
+    "_postman_id": "23f67793-d37b-4814-b093-27f746bd360a",
+    "name": "Legalario",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "id": "57640913-36af-4abb-9b6a-787e895e4caf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\": \"user\",\r\n    \"password\": \"password\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "id": "b3d3c8ba-b1ad-4e60-a0e5-21d29faae4cb",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "f7ed9e83-36b2-4d6c-9911-e54275247ed0"
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Create Sync",
+          "id": "5298475a-85d0-492c-ad09-3507f01d0273",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"monto\": {{monto}},\r\n    \"tipo\": \"{{tipo}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/transactions/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All",
+          "id": "80ee0829-b13f-468e-8268-d35dc4da2b1f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Async",
+          "id": "718093bd-01dc-4800-a030-167ee2903b34",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"user_id\": \"{{user_id}}\",\r\n    \"monto\": {{monto}},\r\n    \"tipo\": \"{{tipo}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/transactions/async-process",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "transactions",
+                "async-process"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "8e6a8128-b3e1-417e-92aa-656011b5de29"
+    },
+    {
+      "name": "Resumen IA",
+      "item": [
+        {
+          "name": "Summarize Text",
+          "id": "5c30e37c-39f3-4609-8187-d0b9de889569",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cache-Control",
+                "value": "no-cache",
+                "name": "cache-control",
+                "type": "text"
+              },
+              {
+                "key": "Postman-Token",
+                "value": "<calculated when request is sent>",
+                "name": "postman-token",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "name": "content-type",
+                "type": "text"
+              },
+              {
+                "key": "Content-Length",
+                "value": "<calculated when request is sent>",
+                "name": "content-length",
+                "type": "text"
+              },
+              {
+                "key": "Host",
+                "value": "<calculated when request is sent>",
+                "name": "host",
+                "type": "text"
+              },
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.39.1",
+                "name": "user-agent",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "*/*",
+                "name": "accept",
+                "type": "text"
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate, br",
+                "name": "accept-encoding",
+                "type": "text"
+              },
+              {
+                "key": "Connection",
+                "value": "keep-alive",
+                "name": "connection",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"text\": \"La inteligencia artificial es un campo de la informática que busca crear sistemas capaces de realizar tareas que normalmente requieren inteligencia humana.\",\r\n  \"max_tokens\": 500\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/assistant/summarize",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "summarize"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get History",
+          "id": "684e06d6-9b3d-4083-ba21-241e6625a322",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/assistant/history?skip=0&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "assistant",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "47a718da-10a3-41bd-9274-0f4d976cd3e8"
+    },
+    {
+      "name": "Wikipedia",
+      "item": [
+        {
+          "name": "Search and Summarize",
+          "id": "258a64ea-dce9-4c08-a2f0-a67b5bf3e440",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"search_term\": \"Inteligencia artificial\",\r\n  \"max_tokens\": 500\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/wikipedia/search",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wikipedia",
+                "search"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get History",
+          "id": "8a968ad7-74a8-4086-a09f-640e2ca89892",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/wikipedia/history?skip=0&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "wikipedia",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "e9b73388-8dac-4fa7-a50e-e546057854fe"
+    },
+    {
+      "name": "Health Check",
+      "id": "c16fea92-cbcd-4b5e-a68c-4464695e8aab",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "id": "0bd5db5b-ed05-48e7-ac8d-77c050aa16b9",
+        "exec": [
+          "if (pm.response.code === 200) {\r",
+          "    var jsonData = pm.response.json();\r",
+          "    pm.environment.set(\"token\", jsonData.access_token);\r",
+          "}"
+        ],
+        "type": "text/javascript",
+        "packages": {}
+      }
+    }
+  ],
+  "variable": [
+    {
+      "id": "77659ca4-6116-42fd-9f30-74390b090d75",
+      "key": "user_id",
+      "value": "user1234",
+      "type": "string"
+    },
+    {
+      "id": "4f9c8913-eeeb-4c6c-acd4-105ac24eb806",
+      "key": "monto",
+      "value": "100.50",
+      "type": "string"
+    },
+    {
+      "id": "b4a05d1c-d4e8-4ca7-91dd-670ebf027477",
+      "key": "tipo",
+      "value": "deposito",
+      "type": "string"
+    }
+  ]
+}

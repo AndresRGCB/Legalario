@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import TransactionList from './components/TransactionList'
 import TransactionForm from './components/TransactionForm'
+import AssistantSummary from './components/AssistantSummary'
+import WikipediaSearch from './components/WikipediaSearch'
 import Notification from './components/Notification'
 import { Login } from './components/Login'
 import { useWebSocket } from './hooks/useWebSocket'
@@ -23,6 +25,7 @@ const globalStyles = `
 
 function App() {
   const [user, setUser] = useState(null)
+  const [activeTab, setActiveTab] = useState('transactions')
   const [notifications, setNotifications] = useState([])
   const { transactions, loading, error, refetch, addTransaction, updateTransaction } = useTransactions()
 
@@ -151,18 +154,58 @@ function App() {
           </div>
         </header>
 
-        <main style={styles.main}>
-          <div style={styles.formColumn}>
-            <TransactionForm onSuccess={handleSuccess} onError={handleError} />
-          </div>
+        <div style={styles.tabContainer}>
+          <button
+            style={activeTab === 'transactions' ? styles.tabActive : styles.tab}
+            onClick={() => setActiveTab('transactions')}
+          >
+            Transacciones
+          </button>
+          <button
+            style={activeTab === 'assistant' ? styles.tabActive : styles.tab}
+            onClick={() => setActiveTab('assistant')}
+          >
+            Resumen IA
+          </button>
+          <button
+            style={activeTab === 'wikipedia' ? {...styles.tabActive, color: '#059669'} : styles.tab}
+            onClick={() => setActiveTab('wikipedia')}
+          >
+            Wikipedia
+          </button>
+        </div>
 
-          <div style={styles.listColumn}>
-            <TransactionList
-              transactions={transactions}
-              loading={loading}
-              error={error}
-            />
-          </div>
+        <main style={styles.main}>
+          {activeTab === 'transactions' && (
+            <>
+              <div style={styles.formColumn}>
+                <TransactionForm onSuccess={handleSuccess} onError={handleError} />
+              </div>
+              <div style={styles.listColumn}>
+                <TransactionList
+                  transactions={transactions}
+                  loading={loading}
+                  error={error}
+                />
+              </div>
+            </>
+          )}
+          {activeTab === 'assistant' && (
+            <div style={styles.fullWidth}>
+              <AssistantSummary
+                onSuccess={(result) => addNotification({ type: 'success', message: result.message })}
+                onError={handleError}
+              />
+            </div>
+          )}
+          {activeTab === 'wikipedia' && (
+            <div style={styles.fullWidth}>
+              <WikipediaSearch
+                onSuccess={(result) => addNotification({ type: 'success', message: result.message })}
+                onError={handleError}
+              />
+            </div>
+          )}
         </main>
 
         <div style={styles.notifications}>
@@ -250,17 +293,53 @@ const styles = {
     fontWeight: 500,
     transition: 'all 0.2s ease'
   },
+  tabContainer: {
+    display: 'flex',
+    gap: '0',
+    padding: '0 30px',
+    paddingTop: '70px',
+    backgroundColor: '#f5f5f5'
+  },
+  tab: {
+    padding: '14px 28px',
+    border: 'none',
+    backgroundColor: '#e9ecef',
+    color: '#495057',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    borderRadius: '8px 8px 0 0',
+    marginRight: '4px',
+    transition: 'all 0.2s ease'
+  },
+  tabActive: {
+    padding: '14px 28px',
+    border: 'none',
+    backgroundColor: '#fff',
+    color: '#7c3aed',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    borderRadius: '8px 8px 0 0',
+    marginRight: '4px',
+    boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+  },
   main: {
     display: 'grid',
     gridTemplateColumns: '1fr 2fr',
     gap: '20px',
     padding: '20px 30px',
-    paddingTop: '80px',
     maxWidth: '1400px',
-    margin: '0 auto'
+    margin: '0 auto',
+    backgroundColor: '#fff',
+    minHeight: 'calc(100vh - 130px)',
+    borderRadius: '0 8px 8px 8px'
   },
   formColumn: {},
   listColumn: {},
+  fullWidth: {
+    gridColumn: '1 / -1'
+  },
   notifications: {
     position: 'fixed',
     top: '80px',

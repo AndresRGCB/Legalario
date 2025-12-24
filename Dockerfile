@@ -14,11 +14,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema + Chromium para Selenium
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    chromium \
+    chromium-driver \
     && rm -rf /var/lib/apt/lists/*
+
+# Variables de entorno para Selenium/Chromium
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Copiar requirements e instalar dependencias Python
 COPY backend/requirements.txt .

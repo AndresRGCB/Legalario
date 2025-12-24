@@ -12,6 +12,23 @@ const getAuthHeaders = () => {
   }
 }
 
+// Funcion para cerrar sesion y redirigir al login
+const forceLogout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  window.location.href = '/'
+}
+
+// Wrapper para manejar respuestas con verificacion de autorizacion
+const handleResponse = async (response, skipAuthCheck = false) => {
+  // Si es 401 Unauthorized, forzar logout
+  if (response.status === 401 && !skipAuthCheck) {
+    forceLogout()
+    throw new Error('Sesion expirada. Redirigiendo al login...')
+  }
+  return response
+}
+
 export const api = {
   /**
    * Registrar nuevo usuario
@@ -55,9 +72,10 @@ export const api = {
    * Obtener usuario actual
    */
   async getMe() {
-    const response = await fetch(`${API_BASE}/auth/me`, {
+    let response = await fetch(`${API_BASE}/auth/me`, {
       headers: getAuthHeaders()
     })
+    response = await handleResponse(response)
 
     if (!response.ok) {
       throw new Error('No autenticado')
@@ -70,11 +88,12 @@ export const api = {
    * Crear transaccion sincrona
    */
   async createTransaction(data) {
-    const response = await fetch(`${API_BASE}/transactions/create`, {
+    let response = await fetch(`${API_BASE}/transactions/create`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     })
+    response = await handleResponse(response)
 
     const result = await response.json()
 
@@ -89,11 +108,12 @@ export const api = {
    * Crear transaccion asincrona (con Celery)
    */
   async createAsyncTransaction(data) {
-    const response = await fetch(`${API_BASE}/transactions/async-process`, {
+    let response = await fetch(`${API_BASE}/transactions/async-process`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     })
+    response = await handleResponse(response)
 
     const result = await response.json()
 
@@ -113,9 +133,10 @@ export const api = {
       if (value) params.append(key, value)
     })
 
-    const response = await fetch(`${API_BASE}/transactions/?${params}`, {
+    let response = await fetch(`${API_BASE}/transactions/?${params}`, {
       headers: getAuthHeaders()
     })
+    response = await handleResponse(response)
 
     if (!response.ok) {
       throw new Error('Error al obtener transacciones')
@@ -129,6 +150,78 @@ export const api = {
    */
   async healthCheck() {
     const response = await fetch(`${API_BASE}/health`)
+    return response.json()
+  },
+
+  /**
+   * Generar resumen con IA (Claude)
+   */
+  async summarizeText(data) {
+    let response = await fetch(`${API_BASE}/assistant/summarize`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    })
+    response = await handleResponse(response)
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.detail?.message || result.detail || 'Error al generar resumen')
+    }
+
+    return result
+  },
+
+  /**
+   * Obtener historial de resumenes
+   */
+  async getSummaryHistory(skip = 0, limit = 20) {
+    let response = await fetch(`${API_BASE}/assistant/history?skip=${skip}&limit=${limit}`, {
+      headers: getAuthHeaders()
+    })
+    response = await handleResponse(response)
+
+    if (!response.ok) {
+      throw new Error('Error al obtener historial')
+    }
+
+    return response.json()
+  },
+
+  /**
+   * Buscar en Wikipedia y generar resumen con IA
+   */
+  async wikipediaSearch(data) {
+    let response = await fetch(`${API_BASE}/wikipedia/search`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
+    })
+    response = await handleResponse(response)
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.detail?.message || result.detail || 'Error al buscar en Wikipedia')
+    }
+
+    return result
+  },
+
+  /**
+   * Obtener historial de busquedas en Wikipedia
+   */
+  async getWikipediaHistory(skip = 0, limit = 20) {
+    let response = await fetch(`${API_BASE}/wikipedia/history?skip=${skip}&limit=${limit}`, {
+      headers: getAuthHeaders()
+    })
+    response = await handleResponse(response)
+
+    if (!response.ok) {
+      throw new Error('Error al obtener historial de Wikipedia')
+    }
+
     return response.json()
   }
 }

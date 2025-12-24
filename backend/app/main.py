@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import transactions_router, auth_router
+from app.api.routes import transactions_router, auth_router, assistant_router, wikipedia_router
 from app.api.websocket import manager, redis_subscriber
 from app.seed import create_default_user
 
@@ -51,6 +51,8 @@ app.add_middleware(
 # Incluir routers
 app.include_router(auth_router, prefix="/api")
 app.include_router(transactions_router, prefix="/api")
+app.include_router(assistant_router, prefix="/api")
+app.include_router(wikipedia_router, prefix="/api")
 
 
 # Health check
